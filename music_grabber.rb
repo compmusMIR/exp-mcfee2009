@@ -2,6 +2,9 @@ require 'rspotify'
 require 'json'
 require 'pry'
 
+# Read end of file for usage
+
+
 class MusicGrabber
   attr_accessor :aset400, :triplets, :data
   def initialize
@@ -17,7 +20,7 @@ class MusicGrabber
   end
 
   def read_artists
-    (puts "Skipping artists" ; return) if !@data[:artist_complete]
+    (puts "Skipping artists" ; return) if @data[:artist_complete]
     puts "Reading artists..."
     achieved = @data[:last_artist].nil?
     @aset400.each_with_index do |artist, idx|
@@ -36,7 +39,7 @@ class MusicGrabber
 
   def download_music
     puts "Downloading music"
-    (puts "Skipping artists" ; return) if !@data[:music_complete]
+    (puts "Skipping download" ; return) if @data[:music_complete]
     achieved = @data[:last_artist_with_song].nil?
     @aset400.each_with_index do |aset400_artist, idx|
       achieved ||= (aset400_artist.last == @data[:last_artist_with_song])
@@ -45,7 +48,10 @@ class MusicGrabber
         next
       end
       puts "ok - #{idx}"
-      artist = @data[:artists].select{|s| s["aset_id"]== 5}.first rescue nil
+      artist = @data[:artists].select{|s| s["aset_id"]==aset400_artist.first}.first rescue nil
+      if artist[:slug].nil?
+        artist = artist.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+      end
       download_artist_music(artist) unless artist.nil?
     end
     @data[:music_complete] = true
@@ -55,10 +61,9 @@ class MusicGrabber
 
   def download_artist_music(artist)
     puts "name: #{artist[:name]}"
-    `mkdir -p ./data/#{artist[:name]}`
-    artist["tracks"].each_with_index do |track, idx|
-      #todo: não está fazendo corretamente o download
-      `wget #{track['preview_url']} -O ./#{artist[:name]}/#{idx}.mp3`
+    `mkdir -p ./data/#{artist[:slug]}`
+    artist[:tracks].each_with_index do |track, idx|
+      `wget #{track['preview_url']} -O ./data/#{artist[:slug]}/#{idx}.mp3`
     end
   end
 
@@ -165,5 +170,17 @@ end
 
 
 
-mg = MusicGrabber.new
-binding.pry
+# > music_grabber = MusicGrabber.new
+
+# > music_grabber.read_artists
+#       first step. it grabs data fom all artists in the list
+# > music_grabber.download_music
+#       second step. it downloads music based on preview_tracks previously grabbed
+
+
+# you can uncomment below and make it happen by calling `ruby music_grabber.rb`
+
+
+# music_grabber = MusicGrabber.new
+# music_grabber.read_artists
+# music_grabber.download_music
